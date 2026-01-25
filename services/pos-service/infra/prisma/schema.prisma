@@ -1,0 +1,120 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Table {
+  id            String      @id @default(uuid())
+  branchId      String
+  tableNumber   String
+  capacity      Int
+  status        String      @default("AVAILABLE") // TableStatus enum
+  currentOrderId String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  orders Order[]
+
+  @@index([branchId])
+  @@index([status])
+}
+
+model Order {
+  id            String      @id @default(uuid())
+  branchId      String
+  tableId       String?
+  orderType     String      // OrderType enum
+  status        String      @default("PENDING") // OrderStatus enum
+  customerId    String?
+  subtotal      Decimal     @default(0)
+  tax           Decimal     @default(0)
+  serviceCharge Decimal     @default(0)
+  discount      Decimal     @default(0)
+  total         Decimal     @default(0)
+  notes         String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  table       Table?        @relation(fields: [tableId], references: [id], onDelete: SetNull)
+  items       OrderItem[]
+  payments    Payment[]
+  kot         Kot?
+
+  @@index([branchId])
+  @@index([tableId])
+  @@index([status])
+  @@index([customerId])
+  @@index([createdAt])
+}
+
+model OrderItem {
+  id        String   @id @default(uuid())
+  orderId   String
+  productId String
+  quantity  Int
+  price     Decimal
+  subtotal  Decimal
+  modifiers String[] @default([])
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+  @@index([productId])
+}
+
+model Payment {
+  id            String      @id @default(uuid())
+  orderId       String
+  paymentMethod String      // PaymentMethod enum
+  amount        Decimal
+  status        String      @default("PENDING") // PaymentStatus enum
+  reference     String?
+  notes         String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+  @@index([status])
+}
+
+model Kot {
+  id        String   @id @default(uuid())
+  orderId   String   @unique
+  kitchenId String?
+  status    String   @default("PENDING") // KotStatus enum
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  items     KotItem[]
+
+  @@index([orderId])
+  @@index([status])
+}
+
+model KotItem {
+  id          String   @id @default(uuid())
+  kotId       String
+  orderItemId String
+  productName String
+  quantity    Int
+  status      String   @default("PENDING") // KotStatus enum
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  kot Kot @relation(fields: [kotId], references: [id], onDelete: Cascade)
+
+  @@index([kotId])
+  @@index([orderItemId])
+}
+
