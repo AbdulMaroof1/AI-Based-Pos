@@ -1,39 +1,69 @@
-import axios, { AxiosInstance, AxiosError } from 'axios';
+import axios, { AxiosInstance } from 'axios';
 
-const AUTH_SERVICE_URL = process.env.NEXT_PUBLIC_AUTH_SERVICE_URL || 'http://localhost:3000';
-const TENANT_SERVICE_URL = process.env.NEXT_PUBLIC_TENANT_SERVICE_URL || 'http://localhost:3001';
-const MODULE_ACCESS_SERVICE_URL = process.env.NEXT_PUBLIC_MODULE_ACCESS_SERVICE_URL || 'http://localhost:3002';
-const POS_SERVICE_URL = process.env.NEXT_PUBLIC_POS_SERVICE_URL || 'http://localhost:3003';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 class ApiClient {
-  private authClient: AxiosInstance;
-  private tenantClient: AxiosInstance;
-  private moduleAccessClient: AxiosInstance;
-  private posClient: AxiosInstance;
+  private client: AxiosInstance;
 
   constructor() {
-    this.authClient = axios.create({ baseURL: AUTH_SERVICE_URL });
-    this.tenantClient = axios.create({ baseURL: TENANT_SERVICE_URL });
-    this.moduleAccessClient = axios.create({ baseURL: MODULE_ACCESS_SERVICE_URL });
-    this.posClient = axios.create({ baseURL: POS_SERVICE_URL });
+    this.client = axios.create({ baseURL: API_URL });
 
-    // Add auth token interceptor
-    [this.authClient, this.tenantClient, this.moduleAccessClient, this.posClient].forEach(client => {
-      client.interceptors.request.use((config) => {
-        if (typeof window !== 'undefined') {
-          const token = localStorage.getItem('accessToken');
-          if (token) {
-            config.headers.Authorization = `Bearer ${token}`;
-          }
+    this.client.interceptors.request.use((config) => {
+      if (typeof window !== 'undefined') {
+        const token = localStorage.getItem('accessToken');
+        if (token) {
+          config.headers.Authorization = `Bearer ${token}`;
         }
-        return config;
-      });
+      }
+      return config;
     });
   }
 
-  // Auth endpoints
+  async requestOtp(email: string) {
+    const response = await this.client.post('/auth/request-otp', { email });
+    return response.data;
+  }
+
+  async verifyOtp(email: string, code: string) {
+    const response = await this.client.post('/auth/verify-otp', { email, code });
+    return response.data;
+  }
+
+  async setupAccount(
+    data: {
+      firstName: string;
+      lastName: string;
+      email: string;
+      password: string;
+      companyName: string;
+      country: string;
+      phone?: string;
+    },
+    setupToken: string
+  ) {
+    const response = await this.client.post('/auth/setup-account', data, {
+      headers: { 'X-Setup-Token': setupToken },
+    });
+    if (response.data.data?.accessToken) {
+      localStorage.setItem('accessToken', response.data.data.accessToken);
+      localStorage.setItem('refreshToken', response.data.data.refreshToken!);
+      localStorage.setItem('user', JSON.stringify(response.data.data.user));
+    }
+    return response.data;
+  }
+
+  async forgotPassword(email: string) {
+    const response = await this.client.post('/auth/forgot-password', { email });
+    return response.data;
+  }
+
+  async resetPassword(token: string, newPassword: string) {
+    const response = await this.client.post('/auth/reset-password', { token, newPassword });
+    return response.data;
+  }
+
   async login(email: string, password: string) {
-    const response = await this.authClient.post('/auth/login', { email, password });
+    const response = await this.client.post('/auth/login', { email, password });
     if (response.data.data?.accessToken) {
       localStorage.setItem('accessToken', response.data.data.accessToken);
       localStorage.setItem('refreshToken', response.data.data.refreshToken);
@@ -42,8 +72,14 @@ class ApiClient {
     return response.data;
   }
 
-  async register(data: { email: string; password: string; firstName: string; lastName: string; role: string }) {
-    const response = await this.authClient.post('/auth/register', data);
+  async register(data: {
+    email: string;
+    password: string;
+    firstName: string;
+    lastName: string;
+    role: string;
+  }) {
+    const response = await this.client.post('/auth/register', data);
     if (response.data.data?.accessToken) {
       localStorage.setItem('accessToken', response.data.data.accessToken);
       localStorage.setItem('refreshToken', response.data.data.refreshToken);
@@ -55,7 +91,7 @@ class ApiClient {
   async refreshToken() {
     const refreshToken = localStorage.getItem('refreshToken');
     if (!refreshToken) throw new Error('No refresh token');
-    const response = await this.authClient.post('/auth/refresh', { refreshToken });
+    const response = await this.client.post('/auth/refresh', { refreshToken });
     if (response.data.data?.accessToken) {
       localStorage.setItem('accessToken', response.data.data.accessToken);
     }
@@ -66,94 +102,97 @@ class ApiClient {
     localStorage.removeItem('accessToken');
     localStorage.removeItem('refreshToken');
     localStorage.removeItem('user');
+    sessionStorage.removeItem('setupToken');
+    sessionStorage.removeItem('pendingEmail');
   }
 
-  // Tenant endpoints
+  async getActiveModules() {
+    const response = await this.client.get('/modules/active');
+    return response.data;
+  }
+
+  async getModulePermissions(tenantId: string) {
+    const response = await this.client.get(`/modules/${tenantId}/permissions`);
+    return response.data;
+  }
+
   async getTenants() {
-    const response = await this.tenantClient.get('/tenants');
+    const response = await this.client.get('/tenants');
     return response.data;
   }
 
   async getTenant(id: string) {
-    const response = await this.tenantClient.get(`/tenants/${id}`);
+    const response = await this.client.get(`/tenants/${id}`);
     return response.data;
   }
 
   async createTenant(data: { name: string; email: string; phone: string; address: string }) {
-    const response = await this.tenantClient.post('/tenants', data);
+    const response = await this.client.post('/tenants', data);
     return response.data;
   }
 
   async getBranches(tenantId: string) {
-    const response = await this.tenantClient.get(`/tenants/${tenantId}/branches`);
-    return response.data;
-  }
-
-  // Module Access endpoints
-  async getModulePermissions(tenantId: string) {
-    const response = await this.moduleAccessClient.get(`/modules/${tenantId}/permissions`);
+    const response = await this.client.get(`/tenants/${tenantId}/branches`);
     return response.data;
   }
 
   async enableModule(tenantId: string, moduleName: string, enabledBy: string) {
-    const response = await this.moduleAccessClient.put(`/modules/${tenantId}/enable/${moduleName}`, { enabledBy });
+    const response = await this.client.put(`/modules/${tenantId}/enable/${moduleName}`, { enabledBy });
     return response.data;
   }
 
   async disableModule(tenantId: string, moduleName: string, enabledBy: string) {
-    const response = await this.moduleAccessClient.put(`/modules/${tenantId}/disable/${moduleName}`, { enabledBy });
+    const response = await this.client.put(`/modules/${tenantId}/disable/${moduleName}`, { enabledBy });
     return response.data;
   }
 
   async checkModuleAccess(tenantId: string, moduleName: string) {
-    const response = await this.moduleAccessClient.get(`/modules/${tenantId}/check/${moduleName}`);
+    const response = await this.client.get(`/modules/${tenantId}/check/${moduleName}`);
     return response.data;
   }
 
-  // POS endpoints
-  async getTables(branchId: string) {
-    const response = await this.posClient.get(`/pos/tables/branch/${branchId}`);
+  async getFiscalYears() {
+    const response = await this.client.get('/accounting/fiscal-years');
     return response.data;
   }
 
-  async createTable(data: { branchId: string; tableNumber: string; capacity: number }) {
-    const response = await this.posClient.post('/pos/tables', data);
+  async createFiscalYear(data: { name: string; startDate: string; endDate: string }) {
+    const response = await this.client.post('/accounting/fiscal-years', data);
     return response.data;
   }
 
-  async getOrders(branchId: string, status?: string) {
-    const url = status 
-      ? `/pos/orders/branch/${branchId}?status=${status}`
-      : `/pos/orders/branch/${branchId}`;
-    const response = await this.posClient.get(url);
+  async getAccounts() {
+    const response = await this.client.get('/accounting/accounts');
     return response.data;
   }
 
-  async createOrder(data: {
-    branchId: string;
-    tableId?: string;
-    orderType: string;
-    items: Array<{ productId: string; quantity: number; price: number }>;
+  async createAccount(data: { code: string; name: string; accountType: string; parentId?: string }) {
+    const response = await this.client.post('/accounting/accounts', data);
+    return response.data;
+  }
+
+  async getJournalEntries(fiscalYearId?: string) {
+    const params = fiscalYearId ? `?fiscalYearId=${fiscalYearId}` : '';
+    const response = await this.client.get(`/accounting/journal-entries${params}`);
+    return response.data;
+  }
+
+  async createJournalEntry(data: {
+    fiscalYearId: string;
+    date: string;
+    reference?: string;
+    memo?: string;
+    lines: { accountId: string; debit: number; credit: number; memo?: string }[];
   }) {
-    const response = await this.posClient.post('/pos/orders', data);
+    const response = await this.client.post('/accounting/journal-entries', data);
     return response.data;
   }
 
-  async getOrder(id: string) {
-    const response = await this.posClient.get(`/pos/orders/${id}`);
-    return response.data;
-  }
-
-  async createPayment(data: { orderId: string; paymentMethod: string; amount: number }) {
-    const response = await this.posClient.post('/pos/payments', data);
-    return response.data;
-  }
-
-  async createKot(data: { orderId: string }) {
-    const response = await this.posClient.post('/pos/kot', data);
+  async getInvoicingSummary(fiscalYearId?: string) {
+    const params = fiscalYearId ? `?fiscalYearId=${fiscalYearId}` : '';
+    const response = await this.client.get(`/accounting/invoicing-summary${params}`);
     return response.data;
   }
 }
 
 export const apiClient = new ApiClient();
-

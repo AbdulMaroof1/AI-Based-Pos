@@ -4,33 +4,30 @@
   "description": "AI-first omnichannel POS system",
   "private": true,
   "scripts": {
-    "build": "pnpm --filter @pos/shared-types build && pnpm --filter @pos/config build && pnpm --filter @pos/api-client build && pnpm --filter @pos/utils build && pnpm --filter '@pos/auth-service' build && pnpm --filter '@pos/tenant-service' build && pnpm --filter '@pos/module-access-service' build && pnpm --filter '@pos/pos-service' build",
+    "build": "pnpm --filter @pos/shared-types build && pnpm --filter @pos/config build && pnpm --filter @pos/api-client build && pnpm --filter @pos/utils build && pnpm --filter @pos/api build",
     "build:packages": "pnpm --filter '@pos/*' build",
-    "build:services": "pnpm --filter '@pos/auth-service' build && pnpm --filter '@pos/tenant-service' build && pnpm --filter '@pos/module-access-service' build && pnpm --filter '@pos/pos-service' build",
     "test": "pnpm -r test",
     "lint": "pnpm -r lint",
-    "start": "start powershell -NoExit -Command \"cd services/auth-service; pnpm dev\" && start powershell -NoExit -Command \"cd services/tenant-service; pnpm dev\" && start powershell -NoExit -Command \"cd services/module-access-service; pnpm dev\" && start powershell -NoExit -Command \"cd services/pos-service; pnpm dev\" && echo All services starting in separate windows!",
-    "dev": "pnpm start",
-    "dev:auth": "pnpm --filter '@pos/auth-service' dev",
-    "dev:tenant": "pnpm --filter '@pos/tenant-service' dev",
-    "dev:module": "pnpm --filter '@pos/module-access-service' dev",
-    "db:migrate": "$env:DATABASE_URL='postgresql://postgres:123456789@localhost:5432/pos_auth_db'; cd services/auth-service; pnpm db:migrate; cd ../tenant-service; $env:DATABASE_URL='postgresql://postgres:123456789@localhost:5432/pos_tenant_db'; pnpm db:migrate; cd ../module-access-service; $env:DATABASE_URL='postgresql://postgres:123456789@localhost:5432/pos_module_db'; pnpm db:migrate; cd ../..",
-    "db:migrate:auth": "cd services/auth-service && pnpm db:migrate && cd ../..",
-    "db:migrate:tenant": "cd services/tenant-service && pnpm db:migrate && cd ../..",
-    "db:migrate:module": "cd services/module-access-service && pnpm db:migrate && cd ../..",
+    "start": "pnpm dev:api",
+    "dev": "pnpm dev:api",
+    "dev:api": "pnpm --filter @pos/api dev",
+    "dev:frontend": "pnpm --filter frontend dev",
+    "db:migrate": "pnpm --filter @pos/api db:migrate",
     "db:generate": "pnpm -r db:generate"
   },
   "devDependencies": {
     "@types/node": "^20.10.0",
-    "typescript": "^5.3.3",
-    "eslint": "^8.55.0",
     "@typescript-eslint/eslint-plugin": "^6.13.0",
     "@typescript-eslint/parser": "^6.13.0",
-    "prettier": "^3.1.0"
+    "eslint": "^8.55.0",
+    "prettier": "^3.1.0",
+    "typescript": "^5.3.3"
   },
   "engines": {
     "node": ">=18.0.0",
     "pnpm": ">=8.0.0"
+  },
+  "dependencies": {
+    "nothing": "^0.1.0"
   }
 }
-

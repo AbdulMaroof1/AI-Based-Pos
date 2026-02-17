@@ -56,5 +56,12 @@ export interface ServiceConfig {
   jwtExpiresIn: string;
   refreshTokenSecret: string;
   refreshTokenExpiresIn: string;
+  smtpHost?: string;
+  smtpPort?: number;
+  smtpUser?: string;
+  smtpPass?: string;
+  smtpFrom?: string;
+  tenantServiceUrl?: string;
+  moduleAccessServiceUrl?: string;
 }
 

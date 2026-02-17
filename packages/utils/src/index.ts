@@ -18,8 +18,12 @@ export class JwtUtil {
     return jwt.sign(payload as object, secret, { expiresIn } as SignOptions);
   }
 
-  static verify(token: string, secret: string): JwtPayload {
-    return jwt.verify(token, secret) as JwtPayload;
+  static signPayload<T extends object>(payload: T, secret: string, expiresIn: string): string {
+    return jwt.sign(payload, secret, { expiresIn } as SignOptions);
+  }
+
+  static verify<T = JwtPayload>(token: string, secret: string): T {
+    return jwt.verify(token, secret) as T;
   }
 
   static decode(token: string): JwtPayload | null {

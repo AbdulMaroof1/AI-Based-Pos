@@ -1,75 +1,47 @@
-# 🚀 Start Commands
+# Start Commands — Modular Monolith (Single Port)
 
-Simple commands to start all services.
+## Quick Start
 
-## Quick Start (All Services)
-
+**Terminal 1 — API (Port 3001)**
 ```bash
-pnpm start
-```
-
-Or use npm:
-```bash
-npm start
-```
-
-This opens 3 separate PowerShell windows, one for each service.
-
-**Note:** Each service has its own `.env` file with the correct DATABASE_URL.
-
-## Start All Services
-
-### Terminal 1 - Auth Service (Port 3000)
-
-```powershell
-$env:DATABASE_URL="postgresql://postgres:123456789@localhost:5432/pos_auth_db"
-$env:PORT="3000"
-cd services/auth-service
+cd services/api
+pnpm db:migrate   # Run once to create database
 pnpm dev
 ```
 
-### Terminal 2 - Tenant Service (Port 3001)
-
-```powershell
-$env:DATABASE_URL="postgresql://postgres:123456789@localhost:5432/pos_tenant_db"
-$env:PORT="3001"
-cd services/tenant-service
-pnpm dev
-```
-
-### Terminal 3 - Module Access Service (Port 3002)
-
-```powershell
-$env:DATABASE_URL="postgresql://postgres:123456789@localhost:5432/pos_module_db"
-$env:PORT="3002"
-cd services/module-access-service
-pnpm dev
-```
-
-## Test APIs
-
-Once services are running, test with:
-
+**Terminal 2 — Frontend (Port 3007)**
 ```bash
-# Test Auth Service
-curl http://localhost:3000/auth/login
-
-# Test Tenant Service
-curl http://localhost:3001/tenants
-
-# Create a Tenant
-curl -X POST http://localhost:3001/tenants -H "Content-Type: application/json" -d '{"name":"Test","email":"test@test.com"}'
-
-# Register User
-curl -X POST http://localhost:3000/auth/register -H "Content-Type: application/json" -d '{"email":"admin@test.com","password":"password123","firstName":"Admin","lastName":"User","role":"ADMIN"}'
-
-# Login
-curl -X POST http://localhost:3000/auth/login -H "Content-Type: application/json" -d '{"email":"admin@test.com","password":"password123"}'
+cd frontend
+pnpm dev
 ```
 
-## Service URLs
+## Environment
 
-- Auth Service: http://localhost:3000
-- Tenant Service: http://localhost:3001
-- Module Access Service: http://localhost:3002
+Create `services/api/.env`:
+```
+DATABASE_URL=postgresql://postgres:123456789@localhost:5432/pos_db
+PORT=3001
+JWT_SECRET=your-secret-key-change-in-production
+REFRESH_TOKEN_SECRET=your-refresh-secret-change-in-production
+```
 
+Create PostgreSQL database:
+```sql
+CREATE DATABASE pos_db;
+```
+
+## API Endpoints (all on http://localhost:3001)
+
+| Path | Method | Description |
+|------|--------|-------------|
+| /auth/request-otp | POST | Send OTP to email |
+| /auth/verify-otp | POST | Verify OTP |
+| /auth/setup-account | POST | Create company + user |
+| /auth/login | POST | Email/password login |
+| /tenants | GET/POST | List/create tenants |
+| /modules/active | GET | Active modules for app launcher |
+| /modules/:tenantId/permissions | GET | Tenant module permissions |
+
+## Frontend
+
+Set `NEXT_PUBLIC_API_URL=http://localhost:3001` or rely on default.

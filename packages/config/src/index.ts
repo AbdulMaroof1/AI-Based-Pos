@@ -9,6 +9,13 @@ export function getConfig(): ServiceConfig {
     jwtExpiresIn: process.env.JWT_EXPIRES_IN || '15m',
     refreshTokenSecret: process.env.REFRESH_TOKEN_SECRET || 'your-refresh-secret-change-in-production',
     refreshTokenExpiresIn: process.env.REFRESH_TOKEN_EXPIRES_IN || '7d',
+    smtpHost: process.env.SMTP_HOST,
+    smtpPort: process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT, 10) : undefined,
+    smtpUser: process.env.SMTP_USER,
+    smtpPass: process.env.SMTP_PASS,
+    smtpFrom: process.env.SMTP_FROM || 'noreply@abmnext.com',
+    tenantServiceUrl: process.env.TENANT_SERVICE_URL || 'http://localhost:3001',
+    moduleAccessServiceUrl: process.env.MODULE_ACCESS_SERVICE_URL || 'http://localhost:3002',
   };
 }
 

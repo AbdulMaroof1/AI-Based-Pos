@@ -1,0 +1,198 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String?
+  firstName String?
+  lastName  String?
+  phone     String?
+  country   String?
+  role      String   @default("ADMIN")
+  tenantId  String?
+  branchId  String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  refreshTokens RefreshToken[]
+
+  @@index([email])
+  @@index([tenantId])
+}
+
+model OtpVerification {
+  id        String   @id @default(uuid())
+  email     String
+  code      String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([email])
+  @@index([expiresAt])
+}
+
+model PasswordResetToken {
+  id        String   @id @default(uuid())
+  email     String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([email])
+  @@index([token])
+  @@index([expiresAt])
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([token])
+}
+
+model Tenant {
+  id           String    @id @default(uuid())
+  name         String
+  email        String    @unique
+  phone        String?
+  address      String?
+  isActive     Boolean   @default(true)
+  plan         String    @default("TRIAL")
+  trialStartAt DateTime?
+  trialEndAt   DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  branches Branch[]
+
+  @@index([email])
+}
+
+model Branch {
+  id        String   @id @default(uuid())
+  tenantId  String
+  name      String
+  address   String?
+  phone     String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+}
+
+model ModulePermission {
+  id         String    @id @default(uuid())
+  tenantId   String
+  moduleName String
+  isEnabled  Boolean   @default(false)
+  enabledAt  DateTime?
+  disabledAt DateTime?
+  enabledBy  String?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@unique([tenantId, moduleName])
+  @@index([tenantId])
+  @@index([moduleName])
+}
+
+model SystemModuleConfig {
+  id           String   @id @default(uuid())
+  moduleName   String   @unique
+  isActive     Boolean  @default(false)
+  phase        Int      @default(0)
+  displayOrder Int      @default(0)
+  label        String
+  href         String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([isActive])
+}
+
+model FiscalYear {
+  id        String   @id @default(uuid())
+  tenantId  String
+  name      String
+  startDate DateTime
+  endDate   DateTime
+  isLocked  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  journalEntries JournalEntry[]
+
+  @@unique([tenantId, name])
+  @@index([tenantId])
+}
+
+model Account {
+  id          String    @id @default(uuid())
+  tenantId    String
+  code        String
+  name        String
+  accountType String
+  parentId    String?
+  parent      Account?  @relation("AccountHierarchy", fields: [parentId], references: [id])
+  children    Account[] @relation("AccountHierarchy")
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  journalEntryLines JournalEntryLine[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
+  @@index([parentId])
+}
+
+model JournalEntry {
+  id           String     @id @default(uuid())
+  tenantId     String
+  fiscalYearId String
+  fiscalYear   FiscalYear @relation(fields: [fiscalYearId], references: [id])
+  date         DateTime
+  reference    String?
+  memo         String?
+  isPosted     Boolean    @default(false)
+  postedAt     DateTime?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  lines JournalEntryLine[]
+
+  @@index([tenantId])
+  @@index([fiscalYearId])
+}
+
+model JournalEntryLine {
+  id             String       @id @default(uuid())
+  journalEntryId String
+  journalEntry   JournalEntry @relation(fields: [journalEntryId], references: [id], onDelete: Cascade)
+  accountId      String
+  account        Account      @relation(fields: [accountId], references: [id])
+  debit          Decimal      @db.Decimal(18, 2)
+  credit         Decimal      @db.Decimal(18, 2)
+  memo           String?
+
+  @@index([journalEntryId])
+  @@index([accountId])
+}

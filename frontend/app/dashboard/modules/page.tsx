@@ -37,7 +37,7 @@ export default function ModulesPage() {
     try {
       const response = await apiClient.getTenants();
       if (response.success) {
-        setTenants(response.data || []);
+        setTenants(response.data?.data ?? response.data ?? []);
       }
     } catch (error) {
       console.error('Failed to load tenants:', error);
