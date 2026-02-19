@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuthStore } from '@/lib/store';
 import { apiClient } from '@/lib/api-client';
@@ -13,7 +13,7 @@ interface ModulePermission {
   enabledBy: string | null;
 }
 
-export default function ModulesPage() {
+function ModulesContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { isAuthenticated, user } = useAuthStore();
@@ -146,6 +146,18 @@ export default function ModulesPage() {
         )}
       </main>
     </div>
+  );
+}
+
+export default function ModulesPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-600" />
+      </div>
+    }>
+      <ModulesContent />
+    </Suspense>
   );
 }
 
