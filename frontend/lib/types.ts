@@ -36,6 +36,9 @@ export enum ModuleName {
   ECOMMERCE = 'ECOMMERCE',
   AI = 'AI',
   CRM = 'CRM',
+  SALES = 'SALES',
+  PURCHASE = 'PURCHASE',
+  HR = 'HR',
 }
 
 export interface JwtPayload {

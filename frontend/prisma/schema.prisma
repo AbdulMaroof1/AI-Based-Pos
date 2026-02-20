@@ -195,3 +195,730 @@ model JournalEntryLine {
   @@index([journalEntryId])
   @@index([accountId])
 }
+
+// ========== CRM Models ==========
+
+model Lead {
+  id              String    @id @default(uuid())
+  tenantId        String
+  name            String
+  email           String?
+  phone           String?
+  company         String?
+  source          String    @default("OTHER")
+  status          String    @default("NEW")
+  assignedTo      String?
+  expectedRevenue Decimal?  @db.Decimal(18, 2)
+  notes           String?
+  convertedAt     DateTime?
+  customerId      String?
+  customer        Customer? @relation(fields: [customerId], references: [id])
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  activities LeadActivity[]
+
+  @@index([tenantId])
+  @@index([status])
+  @@index([tenantId, status])
+}
+
+model LeadActivity {
+  id          String   @id @default(uuid())
+  leadId      String
+  lead        Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  type        String
+  description String
+  createdBy   String?
+  createdAt   DateTime @default(now())
+
+  @@index([leadId])
+  @@index([leadId, createdAt])
+}
+
+model Customer {
+  id        String   @id @default(uuid())
+  tenantId  String
+  name      String
+  email     String?
+  phone     String?
+  company   String?
+  address   String?
+  notes     String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  leads         Lead[]
+  quotations    Quotation[]
+  salesOrders   SalesOrder[]
+  salesInvoices SalesInvoice[]
+  creditNotes   CreditNote[]
+
+  @@index([tenantId])
+  @@index([tenantId, email])
+}
+
+// ========== Sales Models ==========
+
+model Quotation {
+  id         String    @id @default(uuid())
+  tenantId   String
+  customerId String
+  customer   Customer  @relation(fields: [customerId], references: [id])
+  number     String
+  date       DateTime
+  validUntil DateTime?
+  status     String    @default("DRAFT")
+  subtotal   Decimal   @default(0) @db.Decimal(18, 2)
+  taxRate    Decimal   @default(0) @db.Decimal(5, 2)
+  taxAmount  Decimal   @default(0) @db.Decimal(18, 2)
+  total      Decimal   @default(0) @db.Decimal(18, 2)
+  notes      String?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  lines       QuotationLine[]
+  salesOrders SalesOrder[]
+
+  @@unique([tenantId, number])
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@index([customerId])
+}
+
+model QuotationLine {
+  id          String    @id @default(uuid())
+  quotationId String
+  quotation   Quotation @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+  productId   String?
+  product     Product?  @relation(fields: [productId], references: [id])
+  description String
+  quantity    Decimal   @db.Decimal(18, 3)
+  unitPrice   Decimal   @db.Decimal(18, 2)
+  amount      Decimal   @db.Decimal(18, 2)
+
+  @@index([quotationId])
+  @@index([productId])
+}
+
+model SalesOrder {
+  id          String     @id @default(uuid())
+  tenantId    String
+  customerId  String
+  customer    Customer   @relation(fields: [customerId], references: [id])
+  quotationId String?
+  quotation   Quotation? @relation(fields: [quotationId], references: [id])
+  number      String
+  date        DateTime
+  status      String     @default("DRAFT")
+  subtotal    Decimal    @default(0) @db.Decimal(18, 2)
+  taxRate     Decimal    @default(0) @db.Decimal(5, 2)
+  taxAmount   Decimal    @default(0) @db.Decimal(18, 2)
+  total       Decimal    @default(0) @db.Decimal(18, 2)
+  notes       String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  lines    SalesOrderLine[]
+  invoices SalesInvoice[]
+
+  @@unique([tenantId, number])
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@index([customerId])
+}
+
+model SalesOrderLine {
+  id           String     @id @default(uuid())
+  salesOrderId String
+  salesOrder   SalesOrder @relation(fields: [salesOrderId], references: [id], onDelete: Cascade)
+  productId    String?
+  product      Product?   @relation(fields: [productId], references: [id])
+  description  String
+  quantity     Decimal    @db.Decimal(18, 3)
+  unitPrice    Decimal    @db.Decimal(18, 2)
+  amount       Decimal    @db.Decimal(18, 2)
+  deliveredQty Decimal    @default(0) @db.Decimal(18, 3)
+
+  @@index([salesOrderId])
+  @@index([productId])
+}
+
+model SalesInvoice {
+  id           String      @id @default(uuid())
+  tenantId     String
+  customerId   String
+  customer     Customer    @relation(fields: [customerId], references: [id])
+  salesOrderId String?
+  salesOrder   SalesOrder? @relation(fields: [salesOrderId], references: [id])
+  number       String
+  date         DateTime
+  dueDate      DateTime?
+  status       String      @default("DRAFT")
+  subtotal     Decimal     @default(0) @db.Decimal(18, 2)
+  taxRate      Decimal     @default(0) @db.Decimal(5, 2)
+  taxAmount    Decimal     @default(0) @db.Decimal(18, 2)
+  total        Decimal     @default(0) @db.Decimal(18, 2)
+  paidAmount   Decimal     @default(0) @db.Decimal(18, 2)
+  notes        String?
+  isPosted     Boolean     @default(false)
+  postedAt     DateTime?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  lines       SalesInvoiceLine[]
+  payments    SalesPayment[]
+  creditNotes CreditNote[]
+
+  @@unique([tenantId, number])
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@index([customerId])
+}
+
+model SalesInvoiceLine {
+  id          String       @id @default(uuid())
+  tenantId    String
+  invoiceId   String
+  invoice     SalesInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  productId   String?
+  product     Product?     @relation(fields: [productId], references: [id])
+  description String
+  quantity    Decimal      @db.Decimal(18, 3)
+  unitPrice   Decimal      @db.Decimal(18, 2)
+  amount      Decimal      @db.Decimal(18, 2)
+
+  @@index([tenantId])
+  @@index([invoiceId])
+  @@index([productId])
+}
+
+model SalesPayment {
+  id        String       @id @default(uuid())
+  tenantId  String
+  invoiceId String
+  invoice   SalesInvoice @relation(fields: [invoiceId], references: [id])
+  date      DateTime
+  amount    Decimal      @db.Decimal(18, 2)
+  method    String       @default("BANK")
+  reference String?
+  notes     String?
+  createdAt DateTime     @default(now())
+
+  @@index([invoiceId])
+  @@index([tenantId])
+}
+
+model CreditNote {
+  id         String        @id @default(uuid())
+  tenantId   String
+  customerId String
+  customer   Customer      @relation(fields: [customerId], references: [id])
+  invoiceId  String?
+  invoice    SalesInvoice? @relation(fields: [invoiceId], references: [id])
+  number     String
+  date       DateTime
+  status     String        @default("DRAFT")
+  subtotal   Decimal       @default(0) @db.Decimal(18, 2)
+  taxRate    Decimal       @default(0) @db.Decimal(5, 2)
+  taxAmount  Decimal       @default(0) @db.Decimal(18, 2)
+  total      Decimal       @default(0) @db.Decimal(18, 2)
+  reason     String?
+  notes      String?
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+
+  lines CreditNoteLine[]
+
+  @@unique([tenantId, number])
+  @@index([tenantId])
+  @@index([customerId])
+}
+
+model CreditNoteLine {
+  id           String     @id @default(uuid())
+  creditNoteId String
+  creditNote   CreditNote @relation(fields: [creditNoteId], references: [id], onDelete: Cascade)
+  description  String
+  quantity     Decimal    @db.Decimal(18, 3)
+  unitPrice    Decimal    @db.Decimal(18, 2)
+  amount       Decimal    @db.Decimal(18, 2)
+
+  @@index([creditNoteId])
+}
+
+// ========== Purchase Models ==========
+
+model Vendor {
+  id        String   @id @default(uuid())
+  tenantId  String
+  name      String
+  email     String?
+  phone     String?
+  company   String?
+  address   String?
+  taxId     String?
+  notes     String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  purchaseOrders       PurchaseOrder[]
+  purchaseRequisitions PurchaseRequisition[]
+  vendorBills          VendorBill[]
+
+  @@index([tenantId])
+  @@index([tenantId, email])
+}
+
+model PurchaseRequisition {
+  id          String   @id @default(uuid())
+  tenantId    String
+  vendorId    String?
+  vendor      Vendor?  @relation(fields: [vendorId], references: [id])
+  number      String
+  date        DateTime
+  status      String   @default("DRAFT")
+  requestedBy String?
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  lines          PurchaseRequisitionLine[]
+  purchaseOrders PurchaseOrder[]
+
+  @@unique([tenantId, number])
+  @@index([tenantId])
+  @@index([tenantId, status])
+}
+
+model PurchaseRequisitionLine {
+  id             String              @id @default(uuid())
+  requisitionId  String
+  requisition    PurchaseRequisition @relation(fields: [requisitionId], references: [id], onDelete: Cascade)
+  description    String
+  quantity       Decimal             @db.Decimal(18, 3)
+  estimatedPrice Decimal?            @db.Decimal(18, 2)
+
+  @@index([requisitionId])
+}
+
+model PurchaseOrder {
+  id            String               @id @default(uuid())
+  tenantId      String
+  vendorId      String
+  vendor        Vendor               @relation(fields: [vendorId], references: [id])
+  requisitionId String?
+  requisition   PurchaseRequisition? @relation(fields: [requisitionId], references: [id])
+  number        String
+  date          DateTime
+  expectedDate  DateTime?
+  status        String               @default("DRAFT")
+  subtotal      Decimal              @default(0) @db.Decimal(18, 2)
+  taxRate       Decimal              @default(0) @db.Decimal(5, 2)
+  taxAmount     Decimal              @default(0) @db.Decimal(18, 2)
+  total         Decimal              @default(0) @db.Decimal(18, 2)
+  notes         String?
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+
+  lines         PurchaseOrderLine[]
+  goodsReceipts GoodsReceipt[]
+  vendorBills   VendorBill[]
+
+  @@unique([tenantId, number])
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@index([vendorId])
+}
+
+model PurchaseOrderLine {
+  id              String        @id @default(uuid())
+  purchaseOrderId String
+  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  productId       String?
+  product         Product?      @relation(fields: [productId], references: [id])
+  description     String
+  quantity        Decimal       @db.Decimal(18, 3)
+  unitPrice       Decimal       @db.Decimal(18, 2)
+  amount          Decimal       @db.Decimal(18, 2)
+  receivedQty     Decimal       @default(0) @db.Decimal(18, 3)
+
+  @@index([purchaseOrderId])
+  @@index([productId])
+}
+
+model GoodsReceipt {
+  id              String        @id @default(uuid())
+  tenantId        String
+  purchaseOrderId String
+  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id])
+  number          String
+  date            DateTime
+  status          String        @default("DRAFT")
+  notes           String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  lines GoodsReceiptLine[]
+
+  @@unique([tenantId, number])
+  @@index([tenantId])
+  @@index([purchaseOrderId])
+}
+
+model GoodsReceiptLine {
+  id             String       @id @default(uuid())
+  goodsReceiptId String
+  goodsReceipt   GoodsReceipt @relation(fields: [goodsReceiptId], references: [id], onDelete: Cascade)
+  productId      String?
+  product        Product?     @relation(fields: [productId], references: [id])
+  locationId     String?
+  location       Location?    @relation(fields: [locationId], references: [id])
+  description    String
+  quantity       Decimal      @db.Decimal(18, 3)
+  unitCost       Decimal?     @db.Decimal(18, 2)
+
+  @@index([goodsReceiptId])
+  @@index([productId])
+  @@index([locationId])
+}
+
+model VendorBill {
+  id              String         @id @default(uuid())
+  tenantId        String
+  vendorId        String
+  vendor          Vendor         @relation(fields: [vendorId], references: [id])
+  purchaseOrderId String?
+  purchaseOrder   PurchaseOrder? @relation(fields: [purchaseOrderId], references: [id])
+  number          String
+  vendorRef       String?
+  date            DateTime
+  dueDate         DateTime?
+  status          String         @default("DRAFT")
+  subtotal        Decimal        @default(0) @db.Decimal(18, 2)
+  taxRate         Decimal        @default(0) @db.Decimal(5, 2)
+  taxAmount       Decimal        @default(0) @db.Decimal(18, 2)
+  total           Decimal        @default(0) @db.Decimal(18, 2)
+  paidAmount      Decimal        @default(0) @db.Decimal(18, 2)
+  notes           String?
+  isPosted        Boolean        @default(false)
+  postedAt        DateTime?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  lines    VendorBillLine[]
+  payments VendorPayment[]
+
+  @@unique([tenantId, number])
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@index([vendorId])
+}
+
+model VendorBillLine {
+  id          String     @id @default(uuid())
+  tenantId    String
+  billId      String
+  bill        VendorBill @relation(fields: [billId], references: [id], onDelete: Cascade)
+  productId   String?
+  product     Product?   @relation(fields: [productId], references: [id])
+  description String
+  quantity    Decimal    @db.Decimal(18, 3)
+  unitPrice   Decimal    @db.Decimal(18, 2)
+  amount      Decimal    @db.Decimal(18, 2)
+
+  @@index([tenantId])
+  @@index([billId])
+  @@index([productId])
+}
+
+model VendorPayment {
+  id        String     @id @default(uuid())
+  tenantId  String
+  billId    String
+  bill      VendorBill @relation(fields: [billId], references: [id])
+  date      DateTime
+  amount    Decimal    @db.Decimal(18, 2)
+  method    String     @default("BANK")
+  reference String?
+  notes     String?
+  createdAt DateTime   @default(now())
+
+  @@index([billId])
+  @@index([tenantId])
+}
+
+// ========== Inventory Models ==========
+
+model InventorySettings {
+  id                       String   @id @default(uuid())
+  tenantId                 String   @unique
+  purchaseStockRecognition String   @default("RECEIPT") // RECEIPT | BILL
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+
+  @@index([tenantId])
+}
+
+model Product {
+  id           String   @id @default(uuid())
+  tenantId     String
+  sku          String
+  name         String
+  type         String   @default("STOCK") // STOCK | SERVICE
+  standardCost Decimal  @default(0) @db.Decimal(18, 2)
+  salePrice    Decimal  @default(0) @db.Decimal(18, 2)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  stockBalances     StockBalance[]
+  stockMoveLines    StockMoveLine[]
+  QuotationLine     QuotationLine[]
+  SalesOrderLine    SalesOrderLine[]
+  SalesInvoiceLine  SalesInvoiceLine[]
+  PurchaseOrderLine PurchaseOrderLine[]
+  GoodsReceiptLine  GoodsReceiptLine[]
+  VendorBillLine    VendorBillLine[]
+  PosOrderLine      PosOrderLine[]
+
+  @@unique([tenantId, sku])
+  @@index([tenantId])
+  @@index([tenantId, type])
+}
+
+model Warehouse {
+  id        String   @id @default(uuid())
+  tenantId  String
+  code      String
+  name      String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  locations Location[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
+}
+
+model Location {
+  id           String    @id @default(uuid())
+  tenantId     String
+  warehouseId  String
+  warehouse    Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+  code         String
+  name         String
+  isQuarantine Boolean   @default(false)
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  stockBalances     StockBalance[]
+  goodsReceiptLines GoodsReceiptLine[]
+  fromMoveLines     StockMoveLine[]    @relation("FromLocation")
+  toMoveLines       StockMoveLine[]    @relation("ToLocation")
+
+  @@unique([tenantId, warehouseId, code])
+  @@index([tenantId])
+  @@index([warehouseId])
+}
+
+model StockMove {
+  id        String    @id @default(uuid())
+  tenantId  String
+  number    String
+  type      String    @default("ADJUSTMENT") // ADJUSTMENT | TRANSFER | QUARANTINE | RECEIPT | ISSUE
+  date      DateTime
+  memo      String?
+  isPosted  Boolean   @default(false)
+  postedAt  DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  lines StockMoveLine[]
+
+  @@unique([tenantId, number])
+  @@index([tenantId])
+  @@index([tenantId, type])
+  @@index([tenantId, date])
+}
+
+model StockMoveLine {
+  id             String    @id @default(uuid())
+  tenantId       String
+  stockMoveId    String
+  stockMove      StockMove @relation(fields: [stockMoveId], references: [id], onDelete: Cascade)
+  productId      String
+  product        Product   @relation(fields: [productId], references: [id])
+  fromLocationId String?
+  fromLocation   Location? @relation("FromLocation", fields: [fromLocationId], references: [id])
+  toLocationId   String?
+  toLocation     Location? @relation("ToLocation", fields: [toLocationId], references: [id])
+  quantity       Decimal   @db.Decimal(18, 3)
+  unitCost       Decimal   @default(0) @db.Decimal(18, 2)
+  memo           String?
+
+  @@index([tenantId])
+  @@index([stockMoveId])
+  @@index([productId])
+  @@index([fromLocationId])
+  @@index([toLocationId])
+}
+
+model StockBalance {
+  id         String   @id @default(uuid())
+  tenantId   String
+  productId  String
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  locationId String
+  location   Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  qtyOnHand  Decimal  @default(0) @db.Decimal(18, 3)
+  updatedAt  DateTime @updatedAt
+
+  @@unique([tenantId, productId, locationId])
+  @@index([tenantId])
+  @@index([productId])
+  @@index([locationId])
+}
+
+// ========== POS ==========
+
+model PosSession {
+  id          String    @id @default(uuid())
+  tenantId    String
+  branchId    String?
+  openedBy    String
+  openedAt    DateTime  @default(now())
+  closedAt    DateTime?
+  startingCash Decimal  @default(0) @db.Decimal(18, 2)
+  closingCash  Decimal?  @db.Decimal(18, 2)
+  status      String    @default("OPEN") // OPEN | CLOSED
+
+  orders PosOrder[]
+
+  @@index([tenantId])
+  @@index([tenantId, status])
+}
+
+model PosOrder {
+  id        String    @id @default(uuid())
+  tenantId  String
+  sessionId String
+  session   PosSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  branchId  String?
+  number    String
+  date      DateTime  @default(now())
+  status    String    @default("PENDING") // PENDING | PAID | CANCELLED
+  subtotal  Decimal   @default(0) @db.Decimal(18, 2)
+  taxRate   Decimal   @default(0) @db.Decimal(5, 2)
+  taxAmount Decimal   @default(0) @db.Decimal(18, 2)
+  total     Decimal   @default(0) @db.Decimal(18, 2)
+  paidAmount Decimal  @default(0) @db.Decimal(18, 2)
+  createdAt DateTime  @default(now())
+
+  lines PosOrderLine[]
+
+  @@unique([tenantId, number])
+  @@index([tenantId])
+  @@index([sessionId])
+}
+
+model PosOrderLine {
+  id        String   @id @default(uuid())
+  orderId   String
+  order     PosOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId String?
+  product   Product? @relation(fields: [productId], references: [id])
+  description String
+  quantity  Decimal  @db.Decimal(18, 3)
+  unitPrice Decimal  @db.Decimal(18, 2)
+  amount    Decimal  @db.Decimal(18, 2)
+
+  @@index([orderId])
+  @@index([productId])
+}
+
+// ========== HR ==========
+
+model Department {
+  id        String   @id @default(uuid())
+  tenantId  String
+  name      String
+  code      String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  employees Employee[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
+}
+
+model Employee {
+  id           String     @id @default(uuid())
+  tenantId     String
+  departmentId String?
+  department   Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  employeeNumber String
+  firstName    String
+  lastName     String
+  email        String?
+  phone        String?
+  dateOfBirth  DateTime?
+  dateOfJoining DateTime?
+  designation  String?
+  status       String     @default("ACTIVE") // ACTIVE | INACTIVE | TERMINATED
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  attendance Attendance[]
+  leaves     Leave[]
+
+  @@unique([tenantId, employeeNumber])
+  @@index([tenantId])
+  @@index([departmentId])
+}
+
+model Attendance {
+  id         String   @id @default(uuid())
+  tenantId   String
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  date       DateTime
+  checkIn    DateTime?
+  checkOut   DateTime?
+  status     String   @default("PRESENT") // PRESENT | ABSENT | HALF_DAY | LEAVE | HOLIDAY | WEEKLY_OFF
+  notes      String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([tenantId, employeeId, date])
+  @@index([tenantId])
+  @@index([employeeId])
+  @@index([date])
+}
+
+model Leave {
+  id         String    @id @default(uuid())
+  tenantId   String
+  employeeId String
+  employee   Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  leaveType  String    // ANNUAL | SICK | CASUAL | UNPAID | MATERNITY | OTHERS
+  startDate  DateTime
+  endDate    DateTime
+  days       Decimal   @db.Decimal(5, 2)
+  status     String    @default("PENDING") // PENDING | APPROVED | REJECTED
+  reason     String?
+  approvedBy String?
+  approvedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@index([tenantId])
+  @@index([employeeId])
+  @@index([status])
+}

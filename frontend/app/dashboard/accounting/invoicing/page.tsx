@@ -18,6 +18,9 @@ export default function InvoicingPage() {
   const [fiscalYears, setFiscalYears] = useState<{ id: string; name: string }[]>([]);
   const [selectedFiscalYear, setSelectedFiscalYear] = useState<string>('');
   const [summary, setSummary] = useState({
+    totalEntries: 0,
+    totalDebit: 0,
+    totalCredit: 0,
     outgoingBills: 0,
     incomingBills: 0,
     incomingPayment: 0,
@@ -38,13 +41,21 @@ export default function InvoicingPage() {
         ]);
         if (fyRes.success && fyRes.data?.length) {
           setFiscalYears(fyRes.data);
-          setSelectedFiscalYear(fyRes.data[0].id);
+          const today = new Date();
+          const containing = fyRes.data.find(
+            (fy: { id: string; startDate?: string; endDate?: string }) => {
+              const start = fy.startDate ? new Date(fy.startDate) : null;
+              const end = fy.endDate ? new Date(fy.endDate) : null;
+              return start && end && today >= start && today <= end;
+            },
+          );
+          setSelectedFiscalYear(containing?.id ?? fyRes.data[0].id);
         }
         if (sumRes.success && sumRes.data) {
           setSummary(sumRes.data);
         }
       } catch {
-        setSummary({ outgoingBills: 0, incomingBills: 0, incomingPayment: 0, outgoingPayment: 0 });
+        /* ignore */
       } finally {
         setLoading(false);
       }
@@ -68,7 +79,7 @@ export default function InvoicingPage() {
   }
 
   const formatCurrency = (n: number) =>
-    new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(n);
+    new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n);
 
   const sidebar = (
     <>
@@ -78,27 +89,15 @@ export default function InvoicingPage() {
         defaultExpanded
       />
       <NavGroup
-        title="Receivables"
+        title="Accounting Masters"
         items={[
-          { label: 'Customer', href: '/dashboard/accounting/invoicing/customer' },
-          { label: 'Sales Invoice', href: '/dashboard/accounting/invoicing/sales-invoice' },
-          { label: 'Credit Note', href: '/dashboard/accounting/invoicing/credit-note' },
-          { label: 'Accounts Receivable', href: '/dashboard/accounting/invoicing/accounts-receivable' },
+          { label: 'Chart of Accounts', href: '/dashboard/accounting/invoicing/chart-of-accounts' },
+          { label: 'Fiscal Year', href: '/dashboard/accounting/invoicing/fiscal-year' },
         ]}
       />
       <NavGroup
-        title="Payables"
+        title="Entries"
         items={[
-          { label: 'Supplier', href: '/dashboard/accounting/invoicing/supplier' },
-          { label: 'Purchase Invoice', href: '/dashboard/accounting/invoicing/purchase-invoice' },
-          { label: 'Debit Note', href: '/dashboard/accounting/invoicing/debit-note' },
-          { label: 'Accounts Payable', href: '/dashboard/accounting/invoicing/accounts-payable' },
-        ]}
-      />
-      <NavGroup
-        title="Payments"
-        items={[
-          { label: 'Payment Entry', href: '/dashboard/accounting/invoicing/payment-entry' },
           { label: 'Journal Entry', href: '/dashboard/accounting/invoicing/journal-entry' },
         ]}
       />
@@ -131,21 +130,12 @@ export default function InvoicingPage() {
           >
             {fiscalYears.length ? (
               fiscalYears.map((fy) => (
-                <option key={fy.id} value={fy.id}>
-                  {fy.name}
-                </option>
+                <option key={fy.id} value={fy.id}>{fy.name}</option>
               ))
             ) : (
               <option value="">No fiscal year</option>
             )}
           </select>
-        </div>
-
-        <div className="bg-white rounded-lg border border-gray-200 p-6 mb-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Profit and Loss</h2>
-          <div className="h-48 flex items-center justify-center text-gray-400 bg-gray-50 rounded">
-            {loading ? 'Loading...' : 'Chart coming soon'}
-          </div>
         </div>
 
         <div className="mb-4">
@@ -156,10 +146,17 @@ export default function InvoicingPage() {
           </p>
         </div>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          <SummaryCard title="Outgoing Bills" value={formatCurrency(summary.outgoingBills)} />
-          <SummaryCard title="Incoming Bills" value={formatCurrency(summary.incomingBills)} />
-          <SummaryCard title="Incoming Payment" value={formatCurrency(summary.incomingPayment)} />
-          <SummaryCard title="Outgoing Payment" value={formatCurrency(summary.outgoingPayment)} />
+          <SummaryCard title="Posted Entries" value={String(summary.totalEntries)} />
+          <SummaryCard title="Total Debits" value={formatCurrency(summary.totalDebit)} />
+          <SummaryCard title="Total Credits" value={formatCurrency(summary.totalCredit)} />
+          <SummaryCard
+            title="Balance"
+            value={
+              Math.abs(summary.totalDebit - summary.totalCredit) < 0.01
+                ? 'Balanced'
+                : formatCurrency(Math.abs(summary.totalDebit - summary.totalCredit))
+            }
+          />
         </div>
 
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Reports & Masters</h2>

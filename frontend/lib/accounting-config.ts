@@ -39,38 +39,23 @@ export const INVOICING_MASTER_SECTIONS: MasterSection[] = [
   {
     title: 'Accounting Masters',
     items: [
-      { label: 'Company', href: '/dashboard/accounting/invoicing/company' },
       { label: 'Chart of Accounts', href: '/dashboard/accounting/invoicing/chart-of-accounts' },
-      { label: 'Accounts Settings', href: '/dashboard/accounting/invoicing/accounts-settings' },
       { label: 'Fiscal Year', href: '/dashboard/accounting/invoicing/fiscal-year' },
-      { label: 'Payment Term', href: '/dashboard/accounting/invoicing/payment-term' },
     ],
   },
   {
-    title: 'Payments',
+    title: 'Entries',
     items: [
-      { label: 'Payment Entry', href: '/dashboard/accounting/invoicing/payment-entry' },
       { label: 'Journal Entry', href: '/dashboard/accounting/invoicing/journal-entry' },
-      { label: 'Terms and Conditions', href: '/dashboard/accounting/invoicing/terms' },
-      { label: 'Mode of Payment', href: '/dashboard/accounting/invoicing/mode-of-payment' },
     ],
   },
   {
-    title: 'Receivables',
+    title: 'Reports',
     items: [
-      { label: 'Customer', href: '/dashboard/accounting/invoicing/customer' },
-      { label: 'Sales Invoice', href: '/dashboard/accounting/invoicing/sales-invoice' },
-      { label: 'Credit Note', href: '/dashboard/accounting/invoicing/credit-note' },
-      { label: 'Accounts Receivable', href: '/dashboard/accounting/invoicing/accounts-receivable' },
-    ],
-  },
-  {
-    title: 'Payables',
-    items: [
-      { label: 'Supplier', href: '/dashboard/accounting/invoicing/supplier' },
-      { label: 'Purchase Invoice', href: '/dashboard/accounting/invoicing/purchase-invoice' },
-      { label: 'Debit Note', href: '/dashboard/accounting/invoicing/debit-note' },
-      { label: 'Accounts Payable', href: '/dashboard/accounting/invoicing/accounts-payable' },
+      { label: 'General Ledger', href: '/dashboard/accounting/invoicing/general-ledger' },
+      { label: 'Trial Balance', href: '/dashboard/accounting/invoicing/trial-balance' },
+      { label: 'Profit & Loss', href: '/dashboard/accounting/invoicing/financial-reports' },
+      { label: 'Balance Sheet', href: '/dashboard/accounting/invoicing/financial-reports' },
     ],
   },
 ];

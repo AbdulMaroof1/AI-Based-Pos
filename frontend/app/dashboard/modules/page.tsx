@@ -59,6 +59,23 @@ function ModulesContent() {
     }
   };
 
+  const [syncing, setSyncing] = useState(false);
+
+  const syncNewModules = async () => {
+    setSyncing(true);
+    try {
+      const res = await apiClient.syncNewModulesToAllTenants();
+      if (res.success) {
+        alert('New modules (e.g. HR) have been enabled for all tenants. Refresh the dashboard to see them.');
+        if (tenantId) loadPermissions();
+      } else alert(res.error || 'Sync failed');
+    } catch (e: any) {
+      alert(e.response?.data?.error || 'Sync failed');
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   const toggleModule = async (moduleName: string, enabled: boolean) => {
     if (!tenantId || !user?.id) return;
     try {
@@ -83,6 +100,13 @@ function ModulesContent() {
                 ← Back
               </Link>
               <h1 className="text-2xl font-bold text-gray-900">Module Access Control</h1>
+              <button
+                onClick={syncNewModules}
+                disabled={syncing}
+                className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 text-sm font-medium disabled:opacity-50"
+              >
+                {syncing ? 'Syncing...' : 'Sync new modules (HR) to all tenants'}
+              </button>
             </div>
           </div>
         </div>

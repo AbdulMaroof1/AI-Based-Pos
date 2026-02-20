@@ -1,30 +1,24 @@
 import { db } from '@/lib/db';
 import { ModuleName, UpdateModulePermissionDto, TenantModulePermissions } from '@/lib/types';
 
-export async function ensureModuleSeed(): Promise<void> {
-  const count = await db.systemModuleConfig.count();
-  if (count > 0) return;
+const SYSTEM_MODULES = [
+  { moduleName: 'ACCOUNTING', isActive: true, phase: 1, displayOrder: 1, label: 'Accounting', href: '/dashboard/accounting' },
+  { moduleName: 'CRM', isActive: true, phase: 2, displayOrder: 2, label: 'CRM', href: '/dashboard/crm' },
+  { moduleName: 'SALES', isActive: true, phase: 3, displayOrder: 3, label: 'Sales', href: '/dashboard/sales' },
+  { moduleName: 'PURCHASE', isActive: true, phase: 4, displayOrder: 4, label: 'Purchase', href: '/dashboard/purchase' },
+  { moduleName: 'INVENTORY', isActive: true, phase: 5, displayOrder: 5, label: 'Inventory', href: '/dashboard/inventory' },
+  { moduleName: 'HR', isActive: true, phase: 7, displayOrder: 7, label: 'HR', href: '/dashboard/hr' },
+  { moduleName: 'SETTINGS', isActive: true, phase: 0, displayOrder: 100, label: 'ABMNEXT ERP Settings', href: '/dashboard/settings' },
+];
 
-  await db.systemModuleConfig.createMany({
-    data: [
-      {
-        moduleName: 'ACCOUNTING',
-        isActive: true,
-        phase: 1,
-        displayOrder: 1,
-        label: 'Accounting',
-        href: '/dashboard/accounting',
-      },
-      {
-        moduleName: 'SETTINGS',
-        isActive: true,
-        phase: 0,
-        displayOrder: 100,
-        label: 'ABMNEXT ERP Settings',
-        href: '/dashboard/settings',
-      },
-    ],
-  });
+export async function ensureModuleSeed(): Promise<void> {
+  for (const mod of SYSTEM_MODULES) {
+    await db.systemModuleConfig.upsert({
+      where: { moduleName: mod.moduleName },
+      update: {},
+      create: mod,
+    });
+  }
 }
 
 export async function getActiveModules(): Promise<
@@ -175,5 +169,32 @@ export async function setupDefaultPermissionsForTenant(
         enabledBy,
       },
     });
+  }
+}
+
+export async function ensureNewModulesForAllTenants(): Promise<void> {
+  await ensureModuleSeed();
+
+  const activeModules = await db.systemModuleConfig.findMany({
+    where: { isActive: true, moduleName: { not: 'SETTINGS' } },
+  });
+
+  const tenants = await db.tenant.findMany({ where: { isActive: true }, select: { id: true } });
+  const now = new Date();
+
+  for (const tenant of tenants) {
+    for (const mod of activeModules) {
+      await db.modulePermission.upsert({
+        where: { tenantId_moduleName: { tenantId: tenant.id, moduleName: mod.moduleName } },
+        update: {},
+        create: {
+          tenantId: tenant.id,
+          moduleName: mod.moduleName,
+          isEnabled: true,
+          enabledAt: now,
+          enabledBy: 'system',
+        },
+      });
+    }
   }
 }

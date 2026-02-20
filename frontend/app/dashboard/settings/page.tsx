@@ -45,12 +45,20 @@ export default function SettingsPage() {
               {user?.firstName} {user?.lastName}
             </p>
           </div>
+          <div className="mt-4 flex gap-3">
+          <Link
+            href="/dashboard/modules"
+            className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 text-sm font-medium"
+          >
+            Module Access
+          </Link>
           <button
             onClick={handleLogout}
-            className="mt-4 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-md text-sm font-medium"
+            className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-md text-sm font-medium"
           >
             Logout
           </button>
+        </div>
         </div>
       </main>
     </div>

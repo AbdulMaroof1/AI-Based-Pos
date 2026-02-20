@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/lib/store';
 import { apiClient } from '@/lib/api-client';
-import Link from 'next/link';
 import { ModuleLayout, NavGroup } from '@/components/modules';
 
 interface FiscalYear {
@@ -23,23 +22,24 @@ export default function FiscalYearPage() {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ name: '', startDate: '', endDate: '' });
   const [submitting, setSubmitting] = useState(false);
+  const [lockingId, setLockingId] = useState<string | null>(null);
+  const [error, setError] = useState('');
+
+  const load = () => {
+    apiClient.getFiscalYears().then((res) => {
+      if (res.success && res.data) setFiscalYears(res.data);
+    }).finally(() => setLoading(false));
+  };
 
   useEffect(() => {
-    if (!isAuthenticated) {
-      router.push('/login');
-      return;
-    }
-    apiClient
-      .getFiscalYears()
-      .then((res) => {
-        if (res.success && res.data) setFiscalYears(res.data);
-      })
-      .finally(() => setLoading(false));
+    if (!isAuthenticated) { router.push('/login'); return; }
+    load();
   }, [isAuthenticated, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
+    setError('');
     try {
       const res = await apiClient.createFiscalYear({
         name: form.name,
@@ -49,20 +49,44 @@ export default function FiscalYearPage() {
       if (res.success) {
         setForm({ name: '', startDate: '', endDate: '' });
         setShowForm(false);
-        const list = await apiClient.getFiscalYears();
-        if (list.success && list.data) setFiscalYears(list.data);
+        load();
+      } else {
+        setError(res.error || 'Failed to create fiscal year');
       }
+    } catch (err: unknown) {
+      const ax = err as { response?: { data?: { error?: string } } };
+      setError(ax.response?.data?.error || 'Failed to create fiscal year');
     } finally {
       setSubmitting(false);
     }
   };
 
+  const handleLockToggle = async (fy: FiscalYear) => {
+    const action = fy.isLocked ? 'unlock' : 'lock';
+    if (!confirm(`${action === 'lock' ? 'Lock' : 'Unlock'} fiscal year "${fy.name}"? ${action === 'lock' ? 'All unposted entries must be posted first.' : ''}`)) return;
+
+    setLockingId(fy.id);
+    setError('');
+    try {
+      const res = fy.isLocked
+        ? await apiClient.unlockFiscalYear(fy.id)
+        : await apiClient.lockFiscalYear(fy.id);
+      if (res.success) {
+        load();
+      } else {
+        setError(res.error || `Failed to ${action}`);
+      }
+    } catch (err: unknown) {
+      const ax = err as { response?: { data?: { error?: string } } };
+      setError(ax.response?.data?.error || `Failed to ${action}`);
+    } finally {
+      setLockingId(null);
+    }
+  };
+
   const sidebar = (
     <>
-      <NavGroup
-        title="Dashboard"
-        items={[{ label: 'Dashboard', href: '/dashboard/accounting/invoicing' }]}
-      />
+      <NavGroup title="Dashboard" items={[{ label: 'Dashboard', href: '/dashboard/accounting/invoicing' }]} />
       <NavGroup
         title="Accounting Masters"
         items={[
@@ -70,6 +94,18 @@ export default function FiscalYearPage() {
           { label: 'Fiscal Year', href: '/dashboard/accounting/invoicing/fiscal-year' },
         ]}
         defaultExpanded
+      />
+      <NavGroup
+        title="Entries"
+        items={[{ label: 'Journal Entry', href: '/dashboard/accounting/invoicing/journal-entry' }]}
+      />
+      <NavGroup
+        title="Reports"
+        items={[
+          { label: 'General Ledger', href: '/dashboard/accounting/invoicing/general-ledger' },
+          { label: 'Trial Balance', href: '/dashboard/accounting/invoicing/trial-balance' },
+          { label: 'Financial Reports', href: '/dashboard/accounting/invoicing/financial-reports' },
+        ]}
       />
     </>
   );
@@ -92,6 +128,10 @@ export default function FiscalYearPage() {
             {showForm ? 'Cancel' : '+ Add Fiscal Year'}
           </button>
         </div>
+
+        {error && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-md text-sm">{error}</div>
+        )}
 
         {showForm && (
           <form onSubmit={handleSubmit} className="mb-6 p-4 bg-white rounded-lg border border-gray-200 space-y-4">
@@ -140,7 +180,9 @@ export default function FiscalYearPage() {
         )}
 
         {loading ? (
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600" />
+          <div className="flex justify-center py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600" />
+          </div>
         ) : (
           <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
             {fiscalYears.length === 0 ? (
@@ -154,7 +196,8 @@ export default function FiscalYearPage() {
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Start</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">End</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Status</th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
@@ -167,14 +210,27 @@ export default function FiscalYearPage() {
                       <td className="px-4 py-3 text-sm text-gray-700">
                         {new Date(fy.endDate).toLocaleDateString()}
                       </td>
-                      <td className="px-4 py-3">
-                        <span
-                          className={`inline-flex px-2 py-1 text-xs rounded ${
-                            fy.isLocked ? 'bg-amber-100 text-amber-800' : 'bg-green-100 text-green-800'
-                          }`}
-                        >
+                      <td className="px-4 py-3 text-center">
+                        <span className={`inline-flex px-2 py-1 text-xs rounded font-medium ${
+                          fy.isLocked ? 'bg-amber-100 text-amber-800' : 'bg-green-100 text-green-800'
+                        }`}>
                           {fy.isLocked ? 'Locked' : 'Open'}
                         </span>
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <button
+                          onClick={() => handleLockToggle(fy)}
+                          disabled={lockingId === fy.id}
+                          className={`text-sm font-medium disabled:opacity-50 ${
+                            fy.isLocked
+                              ? 'text-green-600 hover:text-green-700'
+                              : 'text-amber-600 hover:text-amber-700'
+                          }`}
+                        >
+                          {lockingId === fy.id
+                            ? 'Processing...'
+                            : fy.isLocked ? 'Unlock' : 'Lock Period'}
+                        </button>
                       </td>
                     </tr>
                   ))}

@@ -9,7 +9,6 @@ const TITLES: Record<string, string> = {
   'accounts-settings': 'Accounts Settings',
   'payment-term': 'Payment Term',
   'payment-entry': 'Payment Entry',
-  'journal-entry': 'Journal Entry',
   terms: 'Terms and Conditions',
   'mode-of-payment': 'Mode of Payment',
   customer: 'Customer',
@@ -20,9 +19,6 @@ const TITLES: Record<string, string> = {
   'purchase-invoice': 'Purchase Invoice',
   'debit-note': 'Debit Note',
   'accounts-payable': 'Accounts Payable',
-  'general-ledger': 'General Ledger',
-  'trial-balance': 'Trial Balance',
-  'financial-reports': 'Financial Reports',
 };
 
 export default function InvoicingSubPage() {
@@ -33,15 +29,24 @@ export default function InvoicingSubPage() {
 
   const sidebar = (
     <>
-      <NavGroup
-        title="Dashboard"
-        items={[{ label: 'Dashboard', href: '/dashboard/accounting/invoicing' }]}
-      />
+      <NavGroup title="Dashboard" items={[{ label: 'Dashboard', href: '/dashboard/accounting/invoicing' }]} />
       <NavGroup
         title="Accounting Masters"
         items={[
           { label: 'Chart of Accounts', href: '/dashboard/accounting/invoicing/chart-of-accounts' },
           { label: 'Fiscal Year', href: '/dashboard/accounting/invoicing/fiscal-year' },
+        ]}
+      />
+      <NavGroup
+        title="Entries"
+        items={[{ label: 'Journal Entry', href: '/dashboard/accounting/invoicing/journal-entry' }]}
+      />
+      <NavGroup
+        title="Reports"
+        items={[
+          { label: 'General Ledger', href: '/dashboard/accounting/invoicing/general-ledger' },
+          { label: 'Trial Balance', href: '/dashboard/accounting/invoicing/trial-balance' },
+          { label: 'Financial Reports', href: '/dashboard/accounting/invoicing/financial-reports' },
         ]}
       />
     </>
@@ -57,7 +62,7 @@ export default function InvoicingSubPage() {
     >
       <div className="p-6">
         <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
-        <p className="mt-4 text-gray-600">This feature is under development.</p>
+        <p className="mt-4 text-gray-600">This feature will be available in a future phase.</p>
         <Link
           href="/dashboard/accounting/invoicing"
           className="mt-4 inline-block text-primary-600 hover:text-primary-700 font-medium"

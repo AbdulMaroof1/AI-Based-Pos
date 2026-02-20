@@ -10,6 +10,7 @@ import {
   Shield,
   ShoppingBag,
   Cog,
+  UserCircle2,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -33,6 +34,7 @@ export const APP_LAUNCHER_MODULES: AppConfig[] = [
   { id: 'selling', label: 'Selling', href: '/dashboard/sales', icon: ShoppingBag },
   { id: 'stock', label: 'Stock', moduleName: 'INVENTORY', href: '/dashboard/inventory', icon: Warehouse },
   { id: 'crm', label: 'CRM', moduleName: 'CRM', href: '/dashboard/crm', icon: Users },
+  { id: 'hr', label: 'HR', moduleName: 'HR', href: '/dashboard/hr', icon: UserCircle2 },
   { id: 'pos', label: 'POS', moduleName: 'POS', href: '/pos', icon: LayoutGrid },
   { id: 'settings', label: 'ABMNEXT ERP Settings', href: '/dashboard/settings', icon: Cog },
 ];

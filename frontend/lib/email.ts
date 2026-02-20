@@ -32,19 +32,24 @@ export async function sendOtpEmail(to: string, code: string): Promise<void> {
     return;
   }
 
-  await t.sendMail({
-    from: config.smtpFrom || 'noreply@abmnext.com',
-    to,
-    subject: `Your ABMNEXT ERP verification code: ${code}`,
-    html: `
-      <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
-        <h2>ABMNEXT ERP</h2>
-        <p>Your verification code is:</p>
-        <p style="font-size: 24px; font-weight: bold; letter-spacing: 4px;">${code}</p>
-        <p style="color: #666;">This code expires in 10 minutes. Do not share it with anyone.</p>
-      </div>
-    `,
-  });
+  try {
+    await t.sendMail({
+      from: config.smtpFrom || 'noreply@abmnext.com',
+      to,
+      subject: `Your ABMNEXT ERP verification code: ${code}`,
+      html: `
+        <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
+          <h2>ABMNEXT ERP</h2>
+          <p>Your verification code is:</p>
+          <p style="font-size: 24px; font-weight: bold; letter-spacing: 4px;">${code}</p>
+          <p style="color: #666;">This code expires in 10 minutes. Do not share it with anyone.</p>
+        </div>
+      `,
+    });
+  } catch (err) {
+    console.error('[EMAIL] Failed to send OTP email:', (err as Error).message);
+    console.log(`[DEV FALLBACK] OTP for ${to}: ${code}`);
+  }
 }
 
 export async function sendPasswordResetEmail(
@@ -61,17 +66,22 @@ export async function sendPasswordResetEmail(
     return;
   }
 
-  await t.sendMail({
-    from: config.smtpFrom || 'noreply@abmnext.com',
-    to,
-    subject: 'Reset your ABMNEXT ERP password',
-    html: `
-      <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
-        <h2>ABMNEXT ERP</h2>
-        <p>You requested a password reset. Click the link below to set a new password:</p>
-        <p><a href="${resetUrl}" style="color: #2563eb;">Reset password</a></p>
-        <p style="color: #666;">This link expires in 1 hour. If you did not request this, ignore this email.</p>
-      </div>
-    `,
-  });
+  try {
+    await t.sendMail({
+      from: config.smtpFrom || 'noreply@abmnext.com',
+      to,
+      subject: 'Reset your ABMNEXT ERP password',
+      html: `
+        <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
+          <h2>ABMNEXT ERP</h2>
+          <p>You requested a password reset. Click the link below to set a new password:</p>
+          <p><a href="${resetUrl}" style="color: #2563eb;">Reset password</a></p>
+          <p style="color: #666;">This link expires in 1 hour. If you did not request this, ignore this email.</p>
+        </div>
+      `,
+    });
+  } catch (err) {
+    console.error('[EMAIL] Failed to send reset email:', (err as Error).message);
+    console.log(`[DEV FALLBACK] Reset link for ${to}: ${resetUrl}`);
+  }
 }
